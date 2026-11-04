@@ -12,8 +12,9 @@ from app.settings import get_settings
 
 class LatexCompileError(RuntimeError):
     def __init__(self, message: str, log: str = ""):
-        super().__init__(message)
         self.log = log
+        tail = "\n".join(log.strip().splitlines()[-25:])
+        super().__init__(f"{message}\n{tail}" if tail else message)
 
 
 def compile_latex(source: str) -> bytes:

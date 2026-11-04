@@ -60,7 +60,7 @@ def render_resume(resume_id: str, profile_data: dict, max_pages: int = 1) -> str
             row.storage_key, row.pages, row.trimmed_items = key, result.pages, result.trimmed
             row.status, row.error = "done", None
         except LatexCompileError as exc:
-            row.status, row.error = "failed", f"{exc}\n{exc.log}"[:4000]
+            row.status, row.error = "failed", str(exc)[:4000]
         except Exception as exc:
             row.status, row.error = "failed", f"{type(exc).__name__}: {exc}"[:2000]
         db.commit()
