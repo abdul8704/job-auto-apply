@@ -1,0 +1,36 @@
+# Which provider and model serves each role. Change providers here, not in code.
+# Model names change often: check https://ai.google.dev/gemini-api/docs/models for current ones.
+providers:
+  gemini:
+    type: gemini
+    api_key_env: GEMINI_API_KEY
+  fake:            # scripted provider for tests / offline dev
+    type: fake
+  # anthropic:     # add an adapter in app/llm/providers/ and register it in client.py
+  #   type: anthropic
+  #   api_key_env: ANTHROPIC_API_KEY
+
+max_retries: 3     # per provider, on rate limits / 5xx, with exponential backoff
+schema_retries: 1  # extra attempt when structured output fails validation
+
+roles:
+  extract:         # resume and job-description parsing
+    provider: gemini
+    model: gemini-2.5-flash
+    temperature: 0.0
+    max_tokens: 8192
+  write:           # resume tailoring, screening answers, cover letters
+    provider: gemini
+    model: gemini-2.5-pro
+    temperature: 0.3
+    max_tokens: 8192
+    fallback:
+      - { provider: gemini, model: gemini-2.5-flash }
+  verify:          # honesty checker
+    provider: gemini
+    model: gemini-2.5-flash
+    temperature: 0.0
+  agent:           # form filling with tool calls
+    provider: gemini
+    model: gemini-2.5-pro
+    temperature: 0.1

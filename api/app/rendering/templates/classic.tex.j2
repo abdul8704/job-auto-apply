@@ -1,0 +1,98 @@
+((= Single-column, ATS-safe resume. Jinja delimiters: ((( var ))), ((* block *)), ((= comment =)). =))
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=0.6in]{geometry}
+\usepackage{fontspec}  % Tectonic is XeTeX-based: native Unicode, Latin Modern by default
+\usepackage[hidelinks]{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\setlength{\parindent}{0pt}
+\pagestyle{empty}
+\titleformat{\section}{\large\bfseries}{}{0pt}{}[\vspace{-6pt}\rule{\linewidth}{0.4pt}]
+\titlespacing*{\section}{0pt}{8pt}{4pt}
+\setlist[itemize]{leftmargin=1.2em,topsep=1pt,itemsep=0pt,parsep=1pt}
+\newcommand{\entry}[4]{\textbf{#1} \hfill #2\\ \textit{#3} \hfill \textit{#4}\par}
+
+\begin{document}
+
+\begin{center}
+  {\LARGE\bfseries ((( p.contact.name )))}\\[3pt]
+  ((* set bits = [] *))
+  ((* if p.contact.email *))((* set _ = bits.append('\\href{mailto:' ~ (p.contact.email|url) ~ '}{' ~ latex_escape(p.contact.email) ~ '}') *))((* endif *))
+  ((* if p.contact.phone *))((* set _ = bits.append(latex_escape(p.contact.phone)) *))((* endif *))
+  ((* if p.contact.location *))((* set _ = bits.append(latex_escape(p.contact.location)) *))((* endif *))
+  ((* for l in p.contact.links *))((* set _ = bits.append('\\href{' ~ (l.url|url) ~ '}{' ~ latex_escape(l.url|display_url) ~ '}') *))((* endfor *))
+  ((( raw(bits|join(' $\\cdot$ ')) )))
+\end{center}
+
+((* if p.summary *))
+\section*{Summary}
+((( p.summary )))
+((* endif *))
+
+((* if p.education *))
+\section*{Education}
+((* for e in p.education *))
+\entry{((( e.institution )))}{((( e.location )))}{((( e.degree )))((* if e.field *)), ((( e.field )))((* endif *))((* if e.grade *)) --- ((( e.grade )))((* endif *))}{((( e.start )))((* if e.start and e.end *)) -- ((* endif *))((( e.end )))}
+((* if e.highlights *))
+\begin{itemize}
+((* for h in e.highlights *))
+  \item ((( h )))
+((* endfor *))
+\end{itemize}
+((* endif *))
+\vspace{2pt}
+((* endfor *))
+((* endif *))
+
+((* if p.experience *))
+\section*{Experience}
+((* for x in p.experience *))
+\entry{((( x.company )))}{((( x.location )))}{((( x.title )))}{((( x.start )))((* if x.start and x.end *)) -- ((* endif *))((( x.end )))}
+((* if x.bullets *))
+\begin{itemize}
+((* for b in x.bullets *))
+  \item ((( b.text )))
+((* endfor *))
+\end{itemize}
+((* endif *))
+\vspace{2pt}
+((* endfor *))
+((* endif *))
+
+((* if p.projects *))
+\section*{Projects}
+((* for pr in p.projects *))
+\textbf{((( pr.name )))}((* if pr.tech *)) $|$ \textit{((( pr.tech|join(', ') )))}((* endif *))((* if pr.url *)) \hfill \href{((( pr.url|url )))}{((( pr.url|display_url )))}((* endif *))\par
+((* if pr.bullets *))
+\begin{itemize}
+((* for b in pr.bullets *))
+  \item ((( b.text )))
+((* endfor *))
+\end{itemize}
+((* elif pr.description *))
+((( pr.description )))\par
+((* endif *))
+\vspace{2pt}
+((* endfor *))
+((* endif *))
+
+((* if p.skills *))
+\section*{Skills}
+((* for g in p.skills *))
+\textbf{((( g.category ))):} ((( g.items|join(', ') )))\par
+((* endfor *))
+((* endif *))
+
+((* if p.certifications or p.achievements *))
+\section*{Achievements and Certifications}
+\begin{itemize}
+((* for a in p.achievements *))
+  \item ((( a )))
+((* endfor *))
+((* for c in p.certifications *))
+  \item ((( c )))
+((* endfor *))
+\end{itemize}
+((* endif *))
+
+\end{document}
