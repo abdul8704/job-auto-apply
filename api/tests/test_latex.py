@@ -33,6 +33,8 @@ def test_urls_are_sanitised():
 
 def test_template_renders_all_sections():
     tex = render_latex(sample_profile())
+    assert tex.startswith(r"\documentclass"), tex[:80]  # nothing may leak before the preamble
+    assert r"\href{mailto:aziz@example.com}" in tex
     for expected in (
         r"Acme \& Co",
         "Backend Intern",
