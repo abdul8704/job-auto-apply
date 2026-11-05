@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env: { POSTGRES_USER: app, POSTGRES_PASSWORD: app, POSTGRES_DB: app }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U app" --health-interval 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: api/pyproject.toml
+      - name: Install Tectonic
+        run: |
+          curl -fsSL "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.15.0/tectonic-0.15.0-x86_64-unknown-linux-musl.tar.gz" \
+            | sudo tar xz -C /usr/local/bin
+          tectonic --version
+      - run: pip install -e '.[dev]'
+      - name: Lint
+        run: ruff check . && ruff format --check .
+      - name: Tests (including a real LaTeX compile)
+        run: pytest -q
+      - name: Migrations on Postgres
+        env:
+          DATABASE_URL: postgresql+psycopg://app:app@localhost:5432/app
+        run: alembic upgrade head && alembic check && alembic downgrade base
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t job-auto-apply-api ./api
