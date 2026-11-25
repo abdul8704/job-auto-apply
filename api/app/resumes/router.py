@@ -24,6 +24,7 @@ class RenderIn(BaseModel):
 
 class ResumeOut(BaseModel):
     id: str
+    job_id: str | None = None
     template: str
     status: str
     pages: int | None

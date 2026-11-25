@@ -86,6 +86,15 @@ def make_env() -> Environment:
 TEMPLATES = {"classic": "classic.tex.j2"}
 
 
+def render_cover_letter(profile: Profile, letter, company: str = "", title: str = "", date: str = "") -> str:
+    """letter is an app.outreach.schema.CoverLetter."""
+    return (
+        make_env()
+        .get_template("cover_letter.tex.j2")
+        .render(p=profile, letter=letter, company=company, title=title, date=date)
+    )
+
+
 def render_latex(profile: Profile, template: str = "classic") -> str:
     if template not in TEMPLATES:
         raise ValueError(f"unknown template {template!r}; choose from {sorted(TEMPLATES)}")
