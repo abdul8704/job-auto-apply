@@ -21,6 +21,19 @@ Plan and design: [Auto Job-Apply Tool: Plan and Design](https://claude.ai/artifa
 - Docker Compose for a laptop or a single EC2 server, and CI with lint, tests, a real LaTeX compile,
   Postgres migrations and a Docker build
 
+**Referral outreach v1**
+
+- Add a job by link (Workday via its JSON endpoint, any page with schema.org JobPosting data, or
+  plain pages) or by pasting the description. The LLM parses it into title, skills, responsibilities
+  and the titles of people who could refer you.
+- Find people to contact: anyone named in the posting, plus Hunter.io and Apollo.io when their API
+  keys are set. People without an email get one from a provider or a guess from the company's email
+  pattern, verified through Hunter when possible. Contacts are ranked as recruiter, hiring manager,
+  peer or other. You can also add people you found yourself.
+- Generate an application kit: a resume tailored to the job (every line traced to a real profile
+  bullet, then checked by a second model, with overstated lines reverted), a referral request, a
+  recruiter note, a LinkedIn note and a cover letter (text and PDF). Nothing is sent automatically.
+
 Next: Phase 1, which adds GitHub import, top-3 projects and JD-based tailoring with an honesty checker.
 
 ## Layout
@@ -32,6 +45,9 @@ api/
     profile/     profile schema, resume text extraction + LLM parsing, profile API
     documents/   resume upload API
     resumes/     render and download PDFs
+    jobs/        add a job by link or text, fetch (Workday, JSON-LD, HTML) and parse it
+    contacts/    contact finder, email patterns, providers/ (hunter, apollo)
+    outreach/    tailoring with the honesty check, outreach messages, cover letters, kits API
     llm/         provider-agnostic LLM client, providers/ (gemini, fake), prompts/
     rendering/   LaTeX templates, escaping, Tectonic compile, page-fit trimming
     worker.py    Celery app and background tasks
@@ -90,6 +106,44 @@ curl -s $API/resumes/$RES/pdf -H "$H" -o resume.pdf
 
 The first account can always sign up and becomes the admin. After that, only emails listed in
 `SIGNUP_ALLOWLIST` can sign up.
+
+## Referral outreach
+
+```bash
+# 1. Add a job (or send {"text": "..."} with the pasted description)
+JOB=$(curl -s -X POST $API/jobs -H "$H" -H 'content-type: application/json' \
+  -d '{"url":"https://acme.wd5.myworkdayjobs.com/External/job/Chennai/SDE_JR123"}' | jq -r .id)
+curl -s $API/jobs/$JOB -H "$H" | jq '.status, .company_domain, .parsed.title'
+# If the domain is missing or wrong:  PATCH /jobs/$JOB {"company_domain": "acme.com"}
+
+# 2. Find contacts (HR/recruiters and likely referrers)
+curl -s -X POST $API/jobs/$JOB/contacts/search -H "$H"
+curl -s $API/jobs/$JOB/contacts -H "$H" | jq '.[] | {full_name, position, email, email_status, category}'
+# Add someone you found on LinkedIn; their email is looked up or guessed
+curl -s -X POST $API/jobs/$JOB/contacts -H "$H" -H 'content-type: application/json' \
+  -d '{"name":"Ravi Kumar","position":"Software Engineer"}'
+
+# 3. Generate the tailored resume, messages and cover letter
+KIT=$(curl -s -X POST $API/jobs/$JOB/kits -H "$H" -H 'content-type: application/json' -d '{}' | jq -r .id)
+curl -s $API/kits/$KIT -H "$H" | jq '.status, .honesty_report, .outreach'
+curl -s $API/kits/$KIT/messages/<contact_id> -H "$H" | jq   # email personalised for one contact
+curl -s $API/kits/$KIT/cover-letter.pdf -H "$H" -o cover-letter.pdf
+curl -s $API/resumes/$(curl -s $API/kits/$KIT -H "$H" | jq -r .resume_id)/pdf -H "$H" -o resume.pdf
+```
+
+Contact sources (`GET /contacts/providers` shows which are on):
+
+| Source | Needs | What it gives |
+| --- | --- | --- |
+| The posting | nothing | names and emails written in the job description |
+| Pattern guess | nothing | `first.last@company.com`-style guesses, labelled `guessed` |
+| Hunter.io | `HUNTER_API_KEY` | HR and team emails, the company's email pattern, email verification |
+| Apollo.io | `APOLLO_API_KEY` | people by title at the company, email reveal (uses Apollo credits) |
+
+`CONTACT_PROVIDERS` sets the order. To add another service (Snov.io, RocketReach), write an adapter
+with `search()` and `find_email()` in `app/contacts/providers/` and register it in
+`build_providers()` in `app/contacts/finder.py`. Guessed emails are never SMTP-probed from the server,
+because that gets server IPs blocklisted; they are verified through Hunter, or left as `guessed`.
 
 ## LLM providers
 

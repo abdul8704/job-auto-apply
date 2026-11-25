@@ -1,0 +1,36 @@
+((= Plain cover letter. Every value is LaTeX-escaped by make_env(); see latex.py =))
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{fontspec}
+\usepackage[hidelinks]{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{10pt}
+\pagestyle{empty}
+
+\begin{document}
+
+((* if p.contact.name *))
+{\Large\bfseries ((( p.contact.name )))}\par
+((* endif *))
+((* set bits = [] *))
+((* if p.contact.email *))((* set _ = bits.append(latex_escape(p.contact.email)) *))((* endif *))
+((* if p.contact.phone *))((* set _ = bits.append(latex_escape(p.contact.phone)) *))((* endif *))
+((* if p.contact.location *))((* set _ = bits.append(latex_escape(p.contact.location)) *))((* endif *))
+((( raw(bits|join(' $\\cdot$ ')) )))
+
+((( date )))
+
+((* if company *))
+((( company )))((* if title *)) --- ((( title )))((* endif *))\par
+((* endif *))
+
+((( letter.greeting )))\par
+
+((* for para in letter.paragraphs *))
+((( para )))
+
+((* endfor *))
+((( letter.closing )))((* if p.contact.name *))\\
+((( p.contact.name )))((* endif *))
+
+\end{document}

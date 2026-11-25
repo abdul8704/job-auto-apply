@@ -39,7 +39,25 @@ class Settings(BaseSettings):
     tectonic_bin: str = "tectonic"
     latex_timeout_seconds: int = 90
 
+    # Job postings: fetched server-side from the link the user gives
+    job_fetch_timeout_seconds: float = 20.0
+    job_fetch_max_bytes: int = 3_000_000
+    job_text_max_chars: int = 30_000
+
+    # Contact finding. Providers run in this order; a provider without its API key is skipped.
+    # The posting itself (names/emails it mentions) and name-pattern guessing always run.
+    contact_providers: str = "hunter,apollo"
+    hunter_api_key: str = ""
+    apollo_api_key: str = ""
+    contact_search_limit: int = Field(default=10, ge=1, le=50)
+    # Spend Hunter verification credits on the best guessed addresses (at most this many per job)
+    hunter_verify_guesses: int = Field(default=3, ge=0, le=20)
+
     max_upload_mb: int = Field(default=5, ge=1)
+
+    @property
+    def contact_provider_names(self) -> list[str]:
+        return [p.strip().lower() for p in self.contact_providers.split(",") if p.strip()]
 
     @property
     def allowlist(self) -> set[str]:

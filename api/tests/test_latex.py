@@ -78,3 +78,15 @@ def test_render_trims_bullets_until_it_fits():
 def test_real_compile_produces_one_page_pdf():
     result = render_pdf(sample_profile())
     assert result.pdf.startswith(b"%PDF") and result.pages == 1
+
+
+@pytest.mark.skipif(shutil.which("tectonic") is None, reason="tectonic not installed")
+def test_real_cover_letter_compile():
+    from app.outreach.schema import CoverLetter
+    from app.rendering.compile import compile_latex, page_count
+    from app.rendering.latex import render_cover_letter
+
+    letter = CoverLetter(paragraphs=["I cut API latency by 40% & shipped C# tools.", "Second paragraph."])
+    latex = render_cover_letter(sample_profile(), letter, "Acme & Co", "SDE_1", "1 December 2026")
+    pdf = compile_latex(latex)
+    assert pdf.startswith(b"%PDF") and page_count(pdf) == 1
