@@ -34,7 +34,16 @@ Plan and design: [Auto Job-Apply Tool: Plan and Design](https://claude.ai/artifa
   bullet, then checked by a second model, with overstated lines reverted), a referral request, a
   recruiter note, a LinkedIn note and a cover letter (text and PDF). Nothing is sent automatically.
 
-Next: Phase 1, which adds GitHub import, top-3 projects and JD-based tailoring with an honesty checker.
+**Phase 1: profile and tailoring**
+
+- Job descriptions from a link or pasted text, a tailored resume with an honesty check, outreach
+  messages and a cover letter (see Referral outreach below)
+- GitHub import: public repos and READMEs summarised into projects (technologies are kept only if the
+  README or repo metadata names them), languages added to skills, and your top 3 projects marked
+  as featured so tailoring keeps them
+- Email delivery of a kit to yourself (console in dev, SMTP or Amazon SES)
+- A web app (`web/`, React + Vite) for the whole flow: upload resume, import GitHub, pick top 3,
+  edit the profile, add jobs, tailor, open PDFs, email the kit, draft messages to contacts
 
 ## Layout
 
@@ -71,6 +80,14 @@ uvicorn app.main:app --reload
 
 This uses SQLite in `api/data/` and runs background jobs inline, so you don't need Redis or Postgres.
 Open http://localhost:8000/docs for the interactive API.
+
+## Web app
+
+```bash
+cd web && npm install && npm run dev   # http://localhost:5173, proxies /api to localhost:8000
+```
+
+With Docker Compose the web app is served by nginx at http://localhost:8080.
 
 ## Run it with Docker Compose
 
@@ -144,6 +161,18 @@ Contact sources (`GET /contacts/providers` shows which are on):
 with `search()` and `find_email()` in `app/contacts/providers/` and register it in
 `build_providers()` in `app/contacts/finder.py`. Guessed emails are never SMTP-probed from the server,
 because that gets server IPs blocklisted; they are verified through Hunter, or left as `guessed`.
+
+## GitHub import
+
+`POST /github/imports {"username": "...", "featured": ["repo-a", "repo-b", "repo-c"]}` reads your
+public, non-fork repos, then `POST /github/imports/{id}/apply` adds the chosen ones to your profile.
+Re-importing updates projects in place (matched by URL). Set `GITHUB_TOKEN` to raise GitHub's rate
+limit. Change your top 3 any time with `PUT /profile/featured`.
+
+## Email
+
+`POST /kits/{id}/email` sends the tailored resume and cover letter to your own address. Set
+`MAIL_BACKEND=smtp` (with `SMTP_*`) or `MAIL_BACKEND=ses` on AWS; the default only logs the email.
 
 ## LLM providers
 

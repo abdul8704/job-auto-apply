@@ -226,3 +226,27 @@ def generate_kit(kit_id: str) -> str:
             kit.status, kit.error = "failed", f"{type(exc).__name__}: {exc}"[:2000]
             db.commit()
         return kit.status
+
+
+@celery_app.task(name="github.import")
+def run_github_import(import_id: str) -> str:
+    from app.github.importer import import_github
+    from app.models import GitHubImport
+
+    with get_sessionmaker()() as db:
+        row = db.get(GitHubImport, import_id)
+        if row is None:
+            return "missing"
+        row.status = "running"
+        db.commit()
+        try:
+            result = asyncio.run(
+                import_github(
+                    get_llm(), row.username, row.featured or [], row.max_repos, get_settings().github_token
+                )
+            )
+            row.result, row.status, row.error = result.model_dump(), "done", None
+        except Exception as exc:
+            row.status, row.error = "failed", f"{type(exc).__name__}: {exc}"[:2000]
+        db.commit()
+        return row.status

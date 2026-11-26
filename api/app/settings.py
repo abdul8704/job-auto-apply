@@ -53,6 +53,22 @@ class Settings(BaseSettings):
     # Spend Hunter verification credits on the best guessed addresses (at most this many per job)
     hunter_verify_guesses: int = Field(default=3, ge=0, le=20)
 
+    # GitHub import (optional token raises the API rate limit from 60 to 5,000 requests/hour)
+    github_token: str = ""
+
+    # Email: console (log only) | smtp | ses
+    mail_backend: str = "console"
+    mail_from: str = "job-auto-apply <no-reply@localhost>"
+    smtp_host: str = "localhost"
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_starttls: bool = True
+
+    # Browser clients allowed to call the API (web app dev server, the Chrome extension)
+    cors_origins: str = "http://localhost:5173"
+    cors_origin_regex: str = r"chrome-extension://.*"
+
     max_upload_mb: int = Field(default=5, ge=1)
 
     @property

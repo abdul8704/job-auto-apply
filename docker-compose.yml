@@ -1,4 +1,4 @@
-# Local and single-server (EC2) setup: API, worker, Postgres, Redis.
+# Local and single-server (EC2) setup: web app, API, worker, Postgres, Redis.
 #   cp .env.example .env   # then add GEMINI_API_KEY and a JWT_SECRET
 #   docker compose up --build
 x-app: &app
@@ -25,6 +25,11 @@ services:
   worker:
     <<: *app
     command: celery -A app.worker.celery_app worker --loglevel=info --concurrency=2
+
+  web:
+    build: ./web
+    ports: ["8080:80"]
+    depends_on: [api]
 
   postgres:
     image: pgvector/pgvector:pg16

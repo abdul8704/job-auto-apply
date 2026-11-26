@@ -151,3 +151,19 @@ class ApplicationKit(Base):
     warnings: Mapped[list | None] = mapped_column(JSONType, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class GitHubImport(Base):
+    """A GitHub import run: repos summarised into draft projects, applied to the profile on request."""
+
+    __tablename__ = "github_imports"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    username: Mapped[str] = mapped_column(String(64))
+    featured: Mapped[list] = mapped_column(JSONType, default=list)
+    max_repos: Mapped[int] = mapped_column(Integer, default=12)
+    status: Mapped[str] = mapped_column(String(16), default="queued")  # queued | running | done | failed
+    result: Mapped[dict | None] = mapped_column(JSONType, nullable=True)  # GitHubImportResult
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

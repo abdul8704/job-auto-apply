@@ -18,6 +18,8 @@ Selection:
 - experience: include every experience entry (by id), with its bullets reordered most relevant first.
   Keep at most 4 bullets per entry.
 - projects: pick the most relevant projects (at most 4), most relevant first, at most 3 bullets each.
+  Projects with "featured": true are the candidate's top picks: include them unless clearly
+  irrelevant to the job.
 - Keep bullets concise: one line where possible, strong action verbs, no first person.
 
 Output only the JSON object.
