@@ -2,10 +2,12 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth.router import router as auth_router
 from app.db import Base, get_engine
 from app.documents.router import router as documents_router
+from app.github.router import router as github_router
 from app.jobs.router import router as jobs_router
 from app.outreach.router import router as outreach_router
 from app.profile.router import router as profile_router
@@ -23,13 +25,22 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="job-auto-apply", version="0.1.0", lifespan=lifespan)
+    settings = get_settings()
+    app = FastAPI(title="job-auto-apply", version="0.2.0", lifespan=lifespan)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[o.strip() for o in settings.cors_origins.split(",") if o.strip()],
+        allow_origin_regex=settings.cors_origin_regex or None,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     app.include_router(auth_router)
     app.include_router(profile_router)
     app.include_router(documents_router)
     app.include_router(resumes_router)
     app.include_router(jobs_router)
     app.include_router(outreach_router)
+    app.include_router(github_router)
 
     @app.get("/health", tags=["meta"])
     def health() -> dict:

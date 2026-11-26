@@ -144,3 +144,49 @@ def message_for_contact(
         resume_id=kit.resume_id,
         has_cover_letter_pdf=bool(kit.cover_letter_key),
     )
+
+
+class EmailOut(BaseModel):
+    sent_to: str
+    attachments: list[str]
+
+
+@router.post("/kits/{kit_id}/email", response_model=EmailOut)
+def email_kit(kit_id: str, user: User = Depends(current_user), db: Session = Depends(get_db)) -> EmailOut:
+    """Email the kit to yourself: tailored resume and cover letter attached, with the job summary."""
+    from app.models import Job, RenderedResume
+    from app.notify.mailer import Attachment, Email, get_mailer
+
+    kit = owned_kit(kit_id, user, db)
+    if kit.status != "done":
+        raise HTTPException(status.HTTP_409_CONFLICT, f"Kit is {kit.status}")
+    job = db.get(Job, kit.job_id)
+    resume = db.get(RenderedResume, kit.resume_id) if kit.resume_id else None
+    attachments: list[Attachment] = []
+    if resume and resume.status == "done" and resume.storage_key:
+        attachments.append(Attachment("resume.pdf", get_storage().get(resume.storage_key)))
+    if kit.cover_letter_key:
+        attachments.append(Attachment("cover-letter.pdf", get_storage().get(kit.cover_letter_key)))
+    if not attachments:
+        raise HTTPException(status.HTTP_409_CONFLICT, "The resume PDF isn't ready yet")
+    report = kit.honesty_report or {}
+    lines = [
+        f"Your application kit for {job.title or 'the role'} at {job.company or 'the company'} is ready.",
+        f"Job link: {job.url}" if job.url else "",
+        "",
+        "Attached: " + ", ".join(a.filename for a in attachments),
+        f"Matched keywords: {', '.join(report.get('matched_keywords', [])) or 'none'}",
+        f"Not shown in your profile: {', '.join(report.get('missing_keywords', [])) or 'none'}",
+        f"Lines reverted by the honesty check: {len(report.get('reverted', []))}",
+        "",
+        "Review the resume, then upload it and submit the application yourself.",
+    ]
+    get_mailer().send(
+        Email(
+            to=user.email,
+            subject=f"Application kit: {job.title or 'job'} at {job.company or ''}".strip(),
+            text="\n".join(line for line in lines if line is not None),
+            attachments=attachments,
+        )
+    )
+    return EmailOut(sent_to=user.email, attachments=[a.filename for a in attachments])
